@@ -4,7 +4,7 @@ Or development tools developed in Go.... what ever it is, I'm learning `go` and 
 
 ## mod_run
 
-A small utility to take monitor a list of files for modification time and run a command when a file in the list is modified.
+A small utility to monitor a list of files for modification and run a command when a file in the list is modified.
 
 ```
 $ mod_run "go run development.go" *.go
