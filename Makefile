@@ -4,11 +4,11 @@ GO=go
 BUILD_FLAGS=-trimpath -pkgdir ./pkg
 
 
-all: test_mod
+all: mod_run
 
 
-test_mod: cmd/test_mod/main.go
-	$(GO) build -o bin/test_mod $(BUILD_FLAGS) cmd/test_mod/main.go
+mod_run: cmd/mod_run/main.go
+	$(GO) build -o bin/mod_run $(BUILD_FLAGS) cmd/mod_run/main.go
 
 
 clean:

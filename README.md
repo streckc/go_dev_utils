@@ -2,11 +2,11 @@
 
 Or development tools developed in Go.... what ever it is, I'm learning `go` and these are my playground projects.
 
-## test_mod
+## mod_run
 
 A small utility to take monitor a list of files for modification time and run a command when a file in the list is modified.
 
 ```
-$ test_mod "go run development.go" *.go
-$ test_mod "python3 develpment.py" development.py
+$ mod_run "go run development.go" *.go
+$ mod_run "python3 develpment.py" development.py
 ```
