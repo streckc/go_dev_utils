@@ -11,30 +11,54 @@ import (
 	"time"
 )
 
-var filelist = make(map[string]time.Time)
+var Version string
+var Build string
+
 var inactivity int
 var shell string
+var version bool
+var filelist = make(map[string]time.Time)
 var command string
+
 var lastRun time.Time
 
-func init() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] <command> <file> [files..]\n", path.Base(os.Args[0]))
-		fmt.Fprintf(os.Stderr, "\nPositional:\n")
-		fmt.Fprintf(os.Stderr, "  command - String of command to run when files change\n")
-		fmt.Fprintf(os.Stderr, "  file    - File to monitor\n")
-		fmt.Fprintf(os.Stderr, "\nOptions:\n")
-		flag.PrintDefaults()
-	}
+func Usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s [options] <command> <file> [files..]\n", path.Base(os.Args[0]))
+	fmt.Fprintf(os.Stderr, "\nPositional:\n")
+	fmt.Fprintf(os.Stderr, "  command - String of command to run when files change\n")
+	fmt.Fprintf(os.Stderr, "  file    - File to monitor\n")
+	fmt.Fprintf(os.Stderr, "\nOptions:\n")
+	flag.PrintDefaults()
+}
+
+func displayVersion() {
+	fmt.Printf("Version: %v\n", Version)
+	fmt.Printf("Build:   %v\n", Build)
+}
+
+func setupArgs() {
+	flag.Usage = Usage
+	flag.BoolVar(&version, "V", false, "Version: Display version and build")
 	flag.IntVar(&inactivity, "i", 600, "Inactivity: Seconds of inactivity before exiting")
 	flag.StringVar(&shell, "s", "bash", "Shell: Shell to run command with")
 	flag.Parse()
+}
+
+func init() {
+	setupArgs()
+
+	if version {
+		displayVersion()
+		os.Exit(0)
+	}
+
 	args := flag.Args()
 	if len(args) < 2 {
 		flag.Usage()
 		log.Fatal("missing required parameters.")
 	}
 	command = args[0]
+
 	// prime the file list with zero'd times
 	for _, v := range args[1:] {
 		filelist[v] = time.Time{}
