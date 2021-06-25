@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 )
@@ -17,6 +18,14 @@ var shell string
 var command string
 
 func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] [command] [file..]\n", path.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "\nPositional:\n")
+		fmt.Fprintf(os.Stderr, "  command - String of command to run when files change\n")
+		fmt.Fprintf(os.Stderr, "  file    - File to monitor\n")
+		fmt.Fprintf(os.Stderr, "\nOptions:\n")
+		flag.PrintDefaults()
+	}
 	flag.StringVar(&shell, "shell", "bash", "Shell to run command with")
 	flag.Parse()
 	args := flag.Args()
