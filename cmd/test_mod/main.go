@@ -75,6 +75,8 @@ func main() {
 			fmt.Println(strings.TrimRight(string(out), "\n "))
 			fmt.Println(timestamp(), "End")
 		}
+		// pause to not overrun the system
+		time.Sleep(500 * time.Millisecond)
 		lastTime = currTime
 	}
 }
