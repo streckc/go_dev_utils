@@ -11,26 +11,28 @@ import (
 	"time"
 )
 
-const Usage = "test_mod <command> <file> [<file>...]"
-
 var filelist = make(map[string]time.Time)
+var inactivity int
 var shell string
 var command string
+var lastRun time.Time
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] [command] [file..]\n", path.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] <command> <file> [files..]\n", path.Base(os.Args[0]))
 		fmt.Fprintf(os.Stderr, "\nPositional:\n")
 		fmt.Fprintf(os.Stderr, "  command - String of command to run when files change\n")
 		fmt.Fprintf(os.Stderr, "  file    - File to monitor\n")
 		fmt.Fprintf(os.Stderr, "\nOptions:\n")
 		flag.PrintDefaults()
 	}
-	flag.StringVar(&shell, "shell", "bash", "Shell to run command with")
+	flag.IntVar(&inactivity, "i", 600, "Inactivity: Seconds of inactivity before exiting")
+	flag.StringVar(&shell, "s", "bash", "Shell: Shell to run command with")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 2 {
-		log.Fatal(Usage)
+		flag.Usage()
+		log.Fatal("missing required parameters.")
 	}
 	command = args[0]
 	// prime the file list with zero'd times
@@ -68,19 +70,37 @@ func updateFileModTimes() time.Time {
 	return maxTime
 }
 
+func monitorInactivity() {
+	// Inactivity of 0 will run until interrupted
+	if inactivity <= 0 {
+		return
+	}
+	for {
+		currTime := time.Now().Add(time.Duration(-1*inactivity) * time.Second)
+		// Only check inactivity after first run of the command completes
+		if !lastRun.IsZero() && currTime.After(lastRun) {
+			log.Fatal("Inactive for ", inactivity, " secondes.  Exiting.")
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func main() {
-	var lastTime time.Time
 	var currTime time.Time
+	var lastTime time.Time
+
+	go monitorInactivity()
 
 	for {
 		currTime = updateFileModTimes()
 		if lastTime.Before(currTime) {
-			fmt.Println(timestamp(), "Begin")
+			fmt.Println(timestamp(), "Begin - Running command.")
 			cmd := exec.Command(shell, "-c", command)
 			// ignore error as we want it reported and keep running
 			out, _ := cmd.CombinedOutput()
 			fmt.Println(strings.TrimRight(string(out), "\n "))
 			fmt.Println(timestamp(), "End - Monitoring", len(filelist), "files.")
+			lastRun = time.Now()
 		}
 		// pause to not overrun the system
 		time.Sleep(500 * time.Millisecond)
