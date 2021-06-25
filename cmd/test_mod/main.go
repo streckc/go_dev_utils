@@ -13,16 +13,17 @@ import (
 const Usage = "test_mod <command> <file> [<file>...]"
 
 var filelist = make(map[string]time.Time)
-var command []string
+var shell string
+var command string
 
 func init() {
+	flag.StringVar(&shell, "shell", "bash", "Shell to run command with")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 2 {
 		log.Fatal(Usage)
 	}
-	command = strings.Split(args[0], " ")
-
+	command = args[0]
 	// prime the file list with zero'd times
 	for _, v := range args[1:] {
 		filelist[v] = time.Time{}
@@ -33,19 +34,11 @@ func timestamp() string {
 	return time.Now().Format("2006/01/02 15:04:05")
 }
 
-func getMaxFileTime() time.Time {
+func updateFileModTimes() time.Time {
 	var maxTime time.Time
-
-	for _, t := range filelist {
-		if t.After(maxTime) {
-			maxTime = t
-		}
+	if len(filelist) == 0 {
+		log.Fatal("No files to monitor.")
 	}
-
-	return maxTime
-}
-
-func updateFileModTimes() {
 	for k, _ := range filelist {
 		s, err := os.Stat(k)
 		for i := 3; i > 0 && err != nil; i-- {
@@ -53,10 +46,17 @@ func updateFileModTimes() {
 			s, err = os.Stat(k)
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Removing file: ", k)
+			delete(filelist, k)
+			maxTime = time.Now()
+		} else {
+			filelist[k] = s.ModTime()
+			if filelist[k].After(maxTime) {
+				maxTime = filelist[k]
+			}
 		}
-		filelist[k] = s.ModTime()
 	}
+	return maxTime
 }
 
 func main() {
@@ -64,16 +64,14 @@ func main() {
 	var currTime time.Time
 
 	for {
-		updateFileModTimes()
-		currTime = getMaxFileTime()
+		currTime = updateFileModTimes()
 		if lastTime.Before(currTime) {
 			fmt.Println(timestamp(), "Begin")
-			out, err := exec.Command(command[0], command[1:]...).Output()
-			if err != nil {
-				log.Fatal(err)
-			}
+			cmd := exec.Command(shell, "-c", command)
+			// ignore error as we want it reported and keep running
+			out, _ := cmd.CombinedOutput()
 			fmt.Println(strings.TrimRight(string(out), "\n "))
-			fmt.Println(timestamp(), "End")
+			fmt.Println(timestamp(), "End - Monitoring", len(filelist), "files.")
 		}
 		// pause to not overrun the system
 		time.Sleep(500 * time.Millisecond)
