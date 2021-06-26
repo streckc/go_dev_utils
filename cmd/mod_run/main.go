@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -120,10 +121,16 @@ func main() {
 		currTime = updateFileModTimes()
 		if lastTime.Before(currTime) {
 			fmt.Println(timestamp(), "Begin - Running command.")
+
+			var stdBuffer bytes.Buffer
 			cmd := exec.Command(shell, "-c", command)
+			mw := io.MultiWriter(os.Stdout, &stdBuffer)
+			cmd.Stdout = mw
+			cmd.Stderr = mw
+
 			// ignore error as we want it reported and keep running
-			out, _ := cmd.CombinedOutput()
-			fmt.Println(strings.TrimRight(string(out), "\n "))
+			cmd.Run()
+			log.Println(stdBuffer.String())
 			fmt.Println(timestamp(), "End - Monitoring", len(filelist), "files.")
 			lastRun = time.Now()
 		}
