@@ -67,10 +67,6 @@ func init() {
 	}
 }
 
-func timestamp() string {
-	return time.Now().Format("2006/01/02 15:04:05")
-}
-
 func updateFileModTimes() time.Time {
 	var maxTime time.Time
 	if len(filelist) == 0 {
@@ -120,7 +116,7 @@ func main() {
 	for {
 		currTime = updateFileModTimes()
 		if lastTime.Before(currTime) {
-			fmt.Println(timestamp(), "Begin - Running command.")
+			log.Println("Begin - Running command.")
 
 			var stdBuffer bytes.Buffer
 			cmd := exec.Command(shell, "-c", command)
@@ -128,10 +124,9 @@ func main() {
 			cmd.Stdout = mw
 			cmd.Stderr = mw
 
-			// ignore error as we want it reported and keep running
 			cmd.Run()
-			log.Println(stdBuffer.String())
-			fmt.Println(timestamp(), "End - Monitoring", len(filelist), "files.")
+			//log.Println(stdBuffer.String())
+			log.Println("End - Monitoring", len(filelist), "files.")
 			lastRun = time.Now()
 		}
 		// pause to not overrun the system
