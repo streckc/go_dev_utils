@@ -101,7 +101,7 @@ func monitorInactivity() {
 		currTime := time.Now().Add(time.Duration(-1*inactivity) * time.Second)
 		// Only check inactivity after first run of the command completes
 		if !lastRun.IsZero() && currTime.After(lastRun) {
-			log.Fatal("Inactive for ", inactivity, " secondes.  Exiting.")
+			log.Fatal("Inactive for ", inactivity, " seconds.  Exiting.")
 		}
 		time.Sleep(1 * time.Second)
 	}
