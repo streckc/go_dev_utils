@@ -25,12 +25,14 @@ build_all:
 	$(foreach GOARCH, $(ARCHITECTURES),\
 	$(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build ${LDFLAGS} -o $(OUT_DIR)/$(BINARY)-$(GOOS)-$(GOARCH) cmd/$(BINARY)/main.go))))
 
+# Installs into home directory bin folder
 install:
 	$(foreach BINARY, $(BINARIES),\
 	go build ${LDFLAGS} -o ~/bin/$(BINARY) cmd/$(BINARY)/main.go)
 
 # Remove only what we've created
 clean:
-	find ${ROOT_DIR} -name '${BINARY}[-?][a-zA-Z0-9]*[-?][a-zA-Z0-9]*' -delete
+	$(foreach BINARY, $(BINARIES),\
+	find ${ROOT_DIR} \( -name '${BINARY}' -o -name '${BINARY}[-?][a-zA-Z0-9]*[-?][a-zA-Z0-9]*' \) -delete)
 
 .PHONY: check clean install build_all all
