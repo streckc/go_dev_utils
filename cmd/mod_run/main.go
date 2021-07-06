@@ -18,6 +18,7 @@ var Build string
 var inactivity int
 var shell string
 var version bool
+var remove bool
 var filelist = make(map[string]time.Time)
 var command string
 
@@ -41,6 +42,7 @@ func displayVersion() {
 func setupArgs() {
 	flag.Usage = Usage
 	flag.BoolVar(&version, "V", false, "Version: Display version and build")
+	flag.BoolVar(&remove, "R", false, "Remove: Remove files from monitor list if not found")
 	flag.IntVar(&inactivity, "i", 600, "Inactivity: Seconds of inactivity before exiting")
 	flag.StringVar(&shell, "s", "bash", "Shell: Shell to run command with")
 	flag.Parse()
@@ -67,28 +69,56 @@ func init() {
 	}
 }
 
+// updatefileModTimes will stat each file being monitored and updtae the list
+// with the files modified time.
 func updateFileModTimes() time.Time {
 	var maxTime time.Time
+	// Track missing files to no report time if files are missing.
+	missing := 0
+
+	// If no files are being monitored, then exit.
 	if len(filelist) == 0 {
 		log.Fatal("No files to monitor.")
 	}
-	for k, _ := range filelist {
+
+	// Range over the file list to get the updated times.
+	for k, t := range filelist {
 		s, err := os.Stat(k)
+		// Account for files disappearing temporarily during writes
 		for i := 3; i > 0 && err != nil; i-- {
 			time.Sleep(100 * time.Millisecond)
 			s, err = os.Stat(k)
 		}
 		if err != nil {
-			log.Println("Removing file: ", k)
-			delete(filelist, k)
-			maxTime = time.Now()
-		} else {
-			filelist[k] = s.ModTime()
-			if filelist[k].After(maxTime) {
-				maxTime = filelist[k]
+			if remove {
+				log.Println("Removing file: ", k)
+				delete(filelist, k)
+				maxTime = time.Now()
 			}
+			if t.After(time.Time{}) {
+				log.Println("Missing file: ", k)
+			}
+			filelist[k] = time.Time{}
+			missing++
+		} else {
+			newTime := s.ModTime()
+			if t.Equal(time.Time{}) {
+				log.Println("Adding file: ", k)
+			} else if newTime.After(t) {
+				log.Println("Updating file: ", k)
+			}
+			if newTime.After(maxTime) {
+				maxTime = newTime
+			}
+			filelist[k] = newTime
 		}
 	}
+
+	// if missing files, zero out maxTime
+	if missing > 0 {
+		maxTime = time.Time{}
+	}
+
 	return maxTime
 }
 
