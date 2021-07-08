@@ -32,7 +32,7 @@ func Usage() {
 	fmt.Fprintf(os.Stderr, "  file    - File to monitor\n")
 	fmt.Fprintf(os.Stderr, "\nOptions:\n")
 	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "\nWhen monitoring files, press enter to display stats.\n\n")
 }
 
 func displayVersion() {
