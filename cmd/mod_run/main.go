@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -72,7 +73,6 @@ func init() {
 // updatefileModTimes will stat each file being monitored and updtae the list
 // with the files modified time.
 func updateFileModTimes() time.Time {
-	var maxTime time.Time
 	// Track missing files to no report time if files are missing.
 	missing := 0
 
@@ -93,7 +93,6 @@ func updateFileModTimes() time.Time {
 			if remove {
 				log.Println("Removing file: ", k)
 				delete(filelist, k)
-				maxTime = time.Now()
 			}
 			if t.After(time.Time{}) {
 				log.Println("Missing file: ", k)
@@ -107,18 +106,25 @@ func updateFileModTimes() time.Time {
 			} else if newTime.After(t) {
 				log.Println("Updating file: ", k)
 			}
-			if newTime.After(maxTime) {
-				maxTime = newTime
-			}
 			filelist[k] = newTime
 		}
 	}
 
-	// if missing files, zero out maxTime
 	if missing > 0 {
-		maxTime = time.Time{}
+		return time.Time{}
+	} else {
+		return getMaxFileTime()
 	}
+}
 
+// getMaxFileTime returns the latest time a file was modified
+func getMaxFileTime() time.Time {
+	var maxTime time.Time
+	for _, t := range filelist {
+		if t.After(maxTime) {
+			maxTime = t
+		}
+	}
 	return maxTime
 }
 
@@ -137,11 +143,31 @@ func monitorInactivity() {
 	}
 }
 
+// keyboardStatus will display statistics when the enter key is pressed.
+func keyboardStatus() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		reader.ReadByte()
+		t := getMaxFileTime()
+		log.Println("  Last mod  :", t.Format("2006/01/02 15:04:05 MST"))
+		log.Println("  Last run  :", lastRun.Format("2006/01/02 15:04:05 MST"))
+		log.Println("  Num files :", len(filelist))
+		for k, v := range filelist {
+			if v.IsZero() {
+				log.Println("   missing", k, ":", v.Format("2006/01/02 15:04:05 MST"))
+			} else if v == t {
+				log.Println("   last   ", k, ":", v.Format("2006/01/02 15:04:05 MST"))
+			}
+		}
+	}
+}
+
 func main() {
 	var currTime time.Time
 	var lastTime time.Time
 
 	go monitorInactivity()
+	go keyboardStatus()
 
 	for {
 		currTime = updateFileModTimes()
