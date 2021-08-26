@@ -149,6 +149,7 @@ func keyboardStatus() {
 	for {
 		reader.ReadByte()
 		t := getMaxFileTime()
+		log.Println("  Command   :", command)
 		log.Println("  Last mod  :", t.Format("2006/01/02 15:04:05 MST"))
 		log.Println("  Last run  :", lastRun.Format("2006/01/02 15:04:05 MST"))
 		log.Println("  Num files :", len(filelist))
@@ -173,6 +174,7 @@ func main() {
 		currTime = updateFileModTimes()
 		if lastTime.Before(currTime) {
 			log.Println("Begin - Running command.")
+			s := time.Now()
 
 			var stdBuffer bytes.Buffer
 			cmd := exec.Command(shell, "-c", command)
@@ -181,8 +183,7 @@ func main() {
 			cmd.Stderr = mw
 
 			cmd.Run()
-			//log.Println(stdBuffer.String())
-			log.Println("End - Monitoring", len(filelist), "files.")
+			log.Println("End - Elapsed:", time.Since(s))
 			lastRun = time.Now()
 		}
 		// pause to not overrun the system
