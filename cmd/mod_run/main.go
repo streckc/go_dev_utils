@@ -149,6 +149,7 @@ func keyboardStatus() {
 	for {
 		reader.ReadByte()
 		t := getMaxFileTime()
+		log.Println("  Command   :", command)
 		log.Println("  Last mod  :", t.Format("2006/01/02 15:04:05 MST"))
 		log.Println("  Last run  :", lastRun.Format("2006/01/02 15:04:05 MST"))
 		log.Println("  Num files :", len(filelist))
