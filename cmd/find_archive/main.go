@@ -12,6 +12,8 @@ import (
 
 var Version string
 var Build string
+var Date string
+
 var version bool
 var commands bool
 var location string
@@ -29,11 +31,12 @@ func Usage() {
 func displayVersion() {
 	fmt.Printf("Version: %v\n", Version)
 	fmt.Printf("Build:   %v\n", Build)
+	fmt.Printf("Date:    %v\n", Date)
 }
 
 func setupArgs() {
 	flag.Usage = Usage
-	//	flag.BoolVar(&version, "V", false, "Version: Display version and build")
+	flag.BoolVar(&version, "V", false, "Version: Display version and build")
 	flag.BoolVar(&commands, "C", false, "Commands: Generate archive commands")
 	flag.IntVar(&days, "d", 0, "Days: Number of days to consider archiving")
 	flag.StringVar(&archive, "a", "archive", "Archive: Archive path to save")

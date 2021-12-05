@@ -15,6 +15,7 @@ import (
 
 var Version string
 var Build string
+var Date string
 
 var inactivity int
 var shell string
@@ -38,6 +39,7 @@ func Usage() {
 func displayVersion() {
 	fmt.Printf("Version: %v\n", Version)
 	fmt.Printf("Build:   %v\n", Build)
+	fmt.Printf("Date:    %v\n", Date)
 }
 
 func setupArgs() {

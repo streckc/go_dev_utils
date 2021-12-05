@@ -1,43 +1,73 @@
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-OUT_DIR:=bin
+OUT_DIR:=build
+BIN_DIR:=~/bin
 
-BINARIES=$(shell ls cmd)
-VERSION=0.1.0
-BUILD=`git rev-parse HEAD`
+TARGETS=$(shell ls cmd)
 PLATFORMS=darwin linux windows
 #ARCHITECTURES=386 amd64
 ARCHITECTURES=amd64
 
-# Setup linker flags option for build that interoperate with variable names in src code
-LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
+#PACKAGES=$(shell find pkg -type f)
 
-define \n
-
-
-endef
+COMMIT=$(shell git rev-parse HEAD)
+LDFLAGS=-ldflags "-X main.Build=$(COMMIT) -s -w"
 
 default: build
 
-all: clean build_all install
+build: $(foreach TARGET, $(TARGETS), $(OUT_DIR)/$(TARGET))
 
-build:
-	$(foreach BINARY, $(BINARIES),\
-	go build ${LDFLAGS} -o $(OUT_DIR)/$(BINARY) cmd/$(BINARY)/main.go${\n})
+test:
+	go test -covermode=atomic -coverprofile=coverage.out ./...
 
-build_all:
-	$(foreach BINARY, $(BINARIES),\
-	$(foreach GOOS, $(PLATFORMS),\
-	$(foreach GOARCH, $(ARCHITECTURES),\
-	$(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build ${LDFLAGS} -o $(OUT_DIR)/$(BINARY)-$(GOOS)-$(GOARCH) cmd/$(BINARY)/main.go${\n}))))
+all: linux windows darwin
+
+linux: $(foreach TARGET, $(TARGETS),\
+        $(foreach ARCH, $(ARCHITECTURES),\
+          $(OUT_DIR)/linux-$(ARCH)/$(TARGET)))
+
+windows: $(foreach TARGET, $(TARGETS),\
+        $(foreach ARCH, $(ARCHITECTURES),\
+          $(OUT_DIR)/windows-$(ARCH)/$(TARGET)))
+
+darwin: $(foreach TARGET, $(TARGETS),\
+        $(foreach ARCH, $(ARCHITECTURES),\
+          $(OUT_DIR)/darwin-$(ARCH)/$(TARGET)))
 
 # Installs into home directory bin folder
-install:
-	$(foreach BINARY, $(BINARIES),\
-	go build ${LDFLAGS} -o ~/bin/$(BINARY) cmd/$(BINARY)/main.go${\n})
+install: build
+	$(foreach TARGET, $(TARGETS), cp $(OUT_DIR)/$(TARGET) $(BIN_DIR);)
 
 # Remove only what we've created
 clean:
-	$(foreach BINARY, $(BINARIES),\
-	find ${ROOT_DIR} \( -name '${BINARY}' -o -name '${BINARY}[-?][a-zA-Z0-9]*[-?][a-zA-Z0-9]*' \) -delete${\n})
+	$(foreach TARGET, $(TARGETS),\
+		find ${ROOT_DIR} \( -name '$(TARGET)' -o -name '$(TARGET)[-?][a-zA-Z0-9]*[-?][a-zA-Z0-9]*' \) -delete;)
+	rm -r $(OUT_DIR)
+	rm -f coverage.out audit-utils-coverage*.html
 
-.PHONY: check clean install build_all all
+### Dependencies
+
+$(OUT_DIR)/%: cmd/%/main.go cmd/%/* $(PACKAGES)
+	$(call build_command,$@,$<)
+
+$(OUT_DIR)/linux-amd64/%: cmd/%/main.go cmd/%/* $(PACKAGES)
+	$(call build_command,$@,$<,linux,amd64)
+
+$(OUT_DIR)/windows-amd64/%: cmd/%/main.go cmd/%/* $(PACKAGES)
+	$(call build_command,$@,$<,windows,amd64)
+	mv $@ $@.exe
+
+$(OUT_DIR)/darwin-amd64/%: cmd/%/main.go cmd/%/* $(PACKAGES)
+	$(call build_command,$@,$<,darwin,amd64)
+
+build_command = \
+	$(eval DEST=$(1)) $(eval SRC=$(2)) $(eval GOOS=$(3)) $(eval GOARCH=$(4)) \
+	$(eval BINARY=$(shell basename $(DEST))) \
+	$(eval TAG=$(shell git tag --list | grep "$(BINARY)-v" | tail -1)) \
+	$(eval VERSION=$(or $(shell echo $(TAG) | sed -e 's/^.*-v//'), 0.0.0)) \
+	$(eval DATE=$(shell git log -1 --format=%aI $(TAG))) \
+	GOOS=$(GOOS) GOARCH=$(GOARCH) \
+	go build \
+		-ldflags "-X main.Build=$(COMMIT) -X main.Version=$(VERSION) -X main.Date=$(DATE) -s -w" \
+		-o $(DEST) $(SRC)
+
+.PHONY: build all test windows linux darwin install clean 
